@@ -713,14 +713,17 @@ export class CudaGdbSession extends GDBDebugSession {
             return super.attachRequest(response, args);
         }
 
-        // 0 is requires for cuda-gdb to attach to non-children
-        const ptraceScope = fs.readFileSync('/proc/sys/kernel/yama/ptrace_scope', 'ascii');
-        const ptraceLocked = ptraceScope.trim() !== '0';
+        let ptrace_scope_filename = '/proc/sys/kernel/yama/ptrace_scope';
+        if (fs.existsSync(ptrace_scope_filename)) {
+            // 0 is requires for cuda-gdb to attach to non-children
+            const ptraceScope = fs.readFileSync(ptrace_scope_filename, 'ascii');
+            const ptraceLocked = ptraceScope.trim() !== '0';
 
-        if (ptraceLocked) {
-            response.success = false;
-            response.message = 'Please try running echo 0 | sudo tee /proc/sys/kernel/yama/ptrace_scope ';
-            this.sendErrorResponse(response, 1, response.message);
+            if (ptraceLocked) {
+                response.success = false;
+                response.message = 'Please try running echo 0 | sudo tee /proc/sys/kernel/yama/ptrace_scope ';
+                this.sendErrorResponse(response, 1, response.message);
+            }
         }
 
         if (!args.port) {
